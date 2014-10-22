@@ -17,4 +17,6 @@ def build():
 
 @cli.command()
 def link():
-    pass
+    from . import link
+    link.link(
+            base_build_dir=link.BASE_BUILD_DIR)
