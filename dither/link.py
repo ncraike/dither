@@ -1,27 +1,31 @@
 import os
 import os.path
 import re
+import datetime
+
+PROG_NAME = 'dither'
 
 BASE_BUILD_DIR = 'built_dotfiles'
 LATEST_BUILD_NAME = 'latest_build'
 BUILT_AT_PREFIX = 'built_at_'
 INSTALLED_BUILD_NAME = 'installed_build'
 
+TIMESTAMP_FMT = '%Y-%m-%d_%H-%M-%S'
+MOVE_TIMESTAMPED_FORMAT = '{original_name}.moved_by_{prog_name}_at_{timestamp}'
+
+HOME_DIR_LINK_NAME = '.dither_dotfiles'
+
 def _get_latest_build_subdir_from_link(build_dir):
     latest_build_link_path = os.path.join(build_dir, LATEST_BUILD_NAME)
     if not (
-            os.path.lexists(latest_build_link_path) and
+            os.path.exists(latest_build_link_path) and
             os.path.islink(latest_build_link_path)):
-        print("Returning because latest_build link can't be found")
-        import IPython; IPython.embed()
         return None
 
     link_target = os.path.join(
             build_dir,
             os.readlink(latest_build_link_path))
-    if not os.path.lexists(link_target):
-        print("Returning because latest_build link target doesn't exist")
-        import IPython; IPython.embed()
+    if not os.path.exists(link_target):
         return None
 
     return link_target
@@ -53,9 +57,38 @@ def find_latest_build_subdir(build_dir):
     else:
         return None
 
-def create_or_update_link(link_location, link_target):
-    if os.path.exists(link_location):
-        os.remove(link_location)
+def move_to_timestamped_name(filepath):
+    timestamp = datetime.datetime.now().strftime(TIMESTAMP_FMT)
+    new_filepath = MOVE_TIMESTAMPED_FORMAT.format(
+            original_name=filepath,
+            prog_name=PROG_NAME,
+            timestamp=timestamp)
+    os.rename(filepath, new_filepath)
+
+def is_link_pointing_to_target(link_location, desired_target):
+    if not os.path.exists(link_location):
+        return False
+
+    raw_current_target = os.readlink(link_location)
+    link_dir = os.path.dirname(link_location)
+    abs_current_target = os.path.abspath(
+            os.path.join(link_dir, raw_current_target))
+    abs_desired_target = os.path.abspath(desired_target)
+
+    return (abs_current_target == abs_desired_target)
+
+def create_or_update_link(link_location, link_target, move_if_exists=False):
+    # Test if link exists, even if it's broken
+    if os.path.lexists(link_location):
+        if is_link_pointing_to_target(link_location, link_target):
+            # Nothing to do: link already exists and points to link_target
+            return
+
+        # Link exists. Either move it aside, or just delete it.
+        if move_if_exists:
+            move_to_timestamped_name(link_location)
+        else:
+            os.remove(link_location)
 
     common_base_dir = os.path.commonprefix([link_location, link_target])
     relative_link_target = os.path.relpath(link_target, start=common_base_dir)
@@ -69,7 +102,15 @@ def link(base_build_dir=None, home_dir=None):
                 "Couldn't find latest build directory in {!r}".format(
                     base_build_dir))
 
+    installed_build_link_path = os.path.join(
+            base_build_dir, INSTALLED_BUILD_NAME)
+
     # Update "installed_build" link to point to latest build
+    create_or_update_link(installed_build_link_path, latest_build_subdir)
+
+    # Update ~/.dither_dotfiles/ to point to installed_build
+    home_dir_link_path = os.path.join(home_dir, HOME_DIR_LINK_NAME)
     create_or_update_link(
-            os.path.join(base_build_dir, INSTALLED_BUILD_NAME),
-            latest_build_subdir)
+            home_dir_link_path,
+            os.path.abspath(installed_build_link_path),
+            move_if_exists=True)

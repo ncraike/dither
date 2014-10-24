@@ -1,3 +1,5 @@
+import os
+
 import click
 
 @click.group(
@@ -19,4 +21,5 @@ def build():
 def link():
     from . import link
     link.link(
-            base_build_dir=link.BASE_BUILD_DIR)
+            base_build_dir=link.BASE_BUILD_DIR,
+            home_dir=os.path.expanduser('~'))
