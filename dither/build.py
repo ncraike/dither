@@ -9,12 +9,13 @@ import importlib
 import staticjinja
 import jinja2
 
-INPUT_DIR = 'dither_templates'
-OUTPUT_DIR = 'built_dotfiles'
+TEMPLATES_DIR = 'dither_templates'
+BUILD_OUTPUT_DIR = 'built_dotfiles'
 OUTPUT_SUBDIR_FMT = 'built_at_{timestamp}'
 TIMESTAMP_FMT = '%Y-%m-%d_%H-%M-%S'
 TEMPLATE_EXTENSIONS = ('.template', '.tpl')
-CONTEXT_PATH = os.path.join(INPUT_DIR, 'template_context.py')
+CONTEXT_PATH = os.path.join(TEMPLATES_DIR, 'template_context.py')
+LATEST_BUILD_LINK_NAME = 'latest_build'
 
 def hostname_from_env():
     return os.environ.get('HOSTNAME', None)
@@ -107,10 +108,10 @@ def ensure_dir_exists(dir_path):
     if not os.path.exists(dir_path):
         os.makedirs(dir_path)
 
-def get_outpath():
+def get_build_output_subdir():
     timestamp = datetime.datetime.now().strftime(TIMESTAMP_FMT)
     subdir_name = OUTPUT_SUBDIR_FMT.format(timestamp=timestamp)
-    outpath = os.path.join(OUTPUT_DIR, subdir_name)
+    outpath = os.path.join(BUILD_OUTPUT_DIR, subdir_name)
     ensure_dir_exists(outpath)
     return outpath
 
@@ -166,7 +167,7 @@ class CustomRenderer(staticjinja.Renderer):
         return super(CustomRenderer, self).render_template(
                 template, context=context, filepath=filepath)
 
-def make_renderer(searchpath=INPUT_DIR,
+def make_renderer(searchpath=None,
                   outpath=None,
                   contexts=None,
                   rules=None,
@@ -204,11 +205,13 @@ def make_renderer(searchpath=INPUT_DIR,
 
 
     """
+    if searchpath is None:
+        raise ValueError("searchpath must be given")
+    if outpath is None:
+        raise ValueError("outpath must be given")
+
     # Coerce search to an absolute path if it is not already
     searchpath = os.path.abspath(searchpath)
-
-    if outpath is None:
-        outpath = get_outpath()
 
     loader = jinja2.FileSystemLoader(
             searchpath=searchpath, encoding=encoding)
@@ -240,8 +243,27 @@ def make_renderer(searchpath=INPUT_DIR,
                     staticpath=staticpath,
                     )
 
+def create_latest_build_link(build_output_dir, latest_build_path):
+    link_location = os.path.join(build_output_dir, LATEST_BUILD_LINK_NAME)
+    if os.path.lexists(link_location):
+        if not os.path.islink(link_location):
+            raise Exception(
+                    "{!r} already exists, but isn't a symlink. Cautiously not "
+                    "removing it.".format(link_location))
+        os.remove(link_location)
+
+    os.symlink(latest_build_path, link_location)
+
 def build():
-    renderer = make_renderer()
-    # enable automatic reloading
+    latest_build_path = get_build_output_subdir()
+
+    renderer = make_renderer(
+            searchpath=TEMPLATES_DIR,
+            outpath=latest_build_path)
+
     renderer.run(use_reloader=False)
 
+    create_latest_build_link(BUILD_OUTPUT_DIR, latest_build_path)
+
+    # enable automatic reloading
+    renderer.run(use_reloader=False)
