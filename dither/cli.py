@@ -9,8 +9,10 @@ def cli():
     pass
 
 @cli.command()
-def update():
-    pass
+@click.pass_context
+def update(context):
+    context.forward(build)
+    context.forward(link)
 
 @cli.command()
 def build():
