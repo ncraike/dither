@@ -92,6 +92,8 @@ def create_or_update_link(link_location, link_target, move_if_exists=False):
         else:
             os.remove(link_location)
 
+    # XXX TODO: Possible bug in that commonprefix works character-by-character,
+    # and so may not always give valid directory names
     common_base_dir = os.path.commonprefix([link_location, link_target])
     relative_link_target = os.path.relpath(link_target, start=common_base_dir)
 
