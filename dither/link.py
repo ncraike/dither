@@ -68,6 +68,8 @@ def move_to_timestamped_name(filepath):
 def is_link_pointing_to_target(link_location, desired_target):
     if not os.path.exists(link_location):
         return False
+    if not os.path.islink(link_location):
+        return False
 
     raw_current_target = os.readlink(link_location)
     link_dir = os.path.dirname(link_location)
@@ -95,17 +97,29 @@ def create_or_update_link(link_location, link_target, move_if_exists=False):
 
     os.symlink(relative_link_target, link_location)
 
+def create_links_for_each_file_in_dir(
+        dir_of_files_to_link_to, dir_to_make_links_in):
+
+    for filename in os.listdir(dir_of_files_to_link_to):
+        created_link_location = os.path.join(dir_to_make_links_in, filename)
+        created_link_target = os.path.join(dir_of_files_to_link_to, filename)
+        create_or_update_link(
+                created_link_location,
+                created_link_target,
+                move_if_exists=True)
+
 def link(base_build_dir=None, home_dir=None):
+    # Figure out what the latest build subdir is, usually by looking
+    # for a "latest_build" symlink in build_dir
     latest_build_subdir = find_latest_build_subdir(base_build_dir)
     if latest_build_subdir is None:
         raise Exception(
                 "Couldn't find latest build directory in {!r}".format(
                     base_build_dir))
 
+    # Update "installed_build" link to point to latest build
     installed_build_link_path = os.path.join(
             base_build_dir, INSTALLED_BUILD_NAME)
-
-    # Update "installed_build" link to point to latest build
     create_or_update_link(installed_build_link_path, latest_build_subdir)
 
     # Update ~/.dither_dotfiles/ to point to installed_build
@@ -114,3 +128,7 @@ def link(base_build_dir=None, home_dir=None):
             home_dir_link_path,
             os.path.abspath(installed_build_link_path),
             move_if_exists=True)
+
+    # For each file in ~/.dither_dotfiles/, make a link from
+    # ~/each_file to ~/.dither_dotfiles/eachfile
+    create_links_for_each_file_in_dir(home_dir_link_path, home_dir)
