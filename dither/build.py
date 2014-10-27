@@ -252,7 +252,10 @@ def create_latest_build_link(build_output_dir, latest_build_path):
                     "removing it.".format(link_location))
         os.remove(link_location)
 
-    os.symlink(latest_build_path, link_location)
+    # XXX TODO Clean this up, maybe use functions from link module
+    os.symlink(
+            os.path.basename(latest_build_path),
+            link_location)
 
 def build():
     latest_build_path = get_build_output_subdir()
