@@ -15,6 +15,19 @@ MOVE_TIMESTAMPED_FORMAT = '{original_name}.moved_by_{prog_name}_at_{timestamp}'
 
 HOME_DIR_LINK_NAME = '.dither_dotfiles'
 
+# Actual dependencies:
+#  ...vary much more. Individual functions require and provide various
+#  dependencies. Some satisfy each others.
+
+# Dependencies include:
+#  - prog_name and timestamp, or... a timestamped filename generator?
+#  - build_output_base_dir: must exist, we'll search it for
+#    latest_build_link_name
+#  - installed_build_name, we'll use this with build_output_base_dir to
+#    build a path where we create a symlink
+#  - home_dir_link_name, we'll use this with the path to the user's home
+#    directory
+
 def _get_latest_build_subdir_from_link(build_dir):
     latest_build_link_path = os.path.join(build_dir, LATEST_BUILD_NAME)
     if not (

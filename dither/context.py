@@ -2,6 +2,18 @@ import os
 import sys
 import importlib
 
+# dependencies:
+# - (config) TEMPLATES_DIR
+# - (config) CONTEXT_PATH - depends on TEMPLATES_DIR
+# - hostname - depends on os module (os.environ) or socket module
+#   (socket.gethostname)
+# - os_family - depends on sys module (sys.platform)
+# - os_name - depends on os family and optionally on issue_file
+# - 
+#
+# provides:
+# - context_func:
+
 TEMPLATES_DIR = 'dither_templates'
 CONTEXT_PATH = os.path.join(TEMPLATES_DIR, 'template_context.py')
 
@@ -66,6 +78,7 @@ def get_context_func(context_path):
 
     context_module = importlib.import_module(context_module_name)
     return context_module.get_context
+
 
 def get_context(
         os=None, os_family=None, hostname=None, context_path=None,
