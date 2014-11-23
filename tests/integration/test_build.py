@@ -1,13 +1,24 @@
 import os
 import os.path
+import tempfile
 
 import dither.build
 
 from common import (
-        setup_test_environment,
+        setup_test_dither_dir,
+        create_test_template,
+        create_test_context,
         LATEST_BUILD_LINK_NAME,
         TEST_TEMPLATED_FILE_NAME,
         TEST_TEMPLATE_NAME)
+
+def setup_test_environment():
+    sandbox_dir = tempfile.mkdtemp()
+    templates_dir, build_output_dir = setup_test_dither_dir(sandbox_dir)
+    create_test_template(templates_dir)
+    create_test_context(templates_dir)
+
+    return sandbox_dir, templates_dir, build_output_dir
 
 def find_templated_file(build_output_dir):
     filepath = os.path.join(
