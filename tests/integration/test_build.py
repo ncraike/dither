@@ -1,24 +1,16 @@
 import os
-import os.path
-import tempfile
+import unittest
 
 import dither.build
 
 from common import (
-        setup_test_dither_dir,
+        DitherIntegrationTestCase,
+        CreateDitherSandboxDirMixin,
         create_test_template,
         create_test_context,
         LATEST_BUILD_LINK_NAME,
-        TEST_TEMPLATED_FILE_NAME,
-        TEST_TEMPLATE_NAME)
+        TEST_TEMPLATED_FILE_NAME)
 
-def setup_test_environment():
-    sandbox_dir = tempfile.mkdtemp()
-    templates_dir, build_output_dir = setup_test_dither_dir(sandbox_dir)
-    create_test_template(templates_dir)
-    create_test_context(templates_dir)
-
-    return sandbox_dir, templates_dir, build_output_dir
 
 def find_templated_file(build_output_dir):
     filepath = os.path.join(
@@ -31,7 +23,8 @@ def find_templated_file(build_output_dir):
 
 def is_templated_content_correct(build_output_dir):
     templated_filepath = find_templated_file(build_output_dir)
-    contents = open(templated_filepath, 'r').read()
+    with open(templated_filepath, 'r') as f:
+        contents = f.read()
     stripped_contents = '\n'.join(
             line.strip()
             for line in
@@ -43,14 +36,22 @@ sample output
 this line should appear
 My variable is Test value.''')
 
-def test_build():
-    sandbox_dir, templates_dir, build_output_dir = setup_test_environment()
-    print("Sandbox is {!r}".format(sandbox_dir))
-    os.chdir(sandbox_dir)
+class Test_build_output_is_correct(
+        CreateDitherSandboxDirMixin,
+        DitherIntegrationTestCase):
 
-    dither.build.build()
+    def setUp(self):
+        self.create_dither_sandbox_dir()
 
-    assert is_templated_content_correct(build_output_dir)
+        create_test_template(self.templates_dir)
+        create_test_context(self.templates_dir)
+
+        self.change_cwd_to_sandbox_dither_dir()
+
+    def runTest(self):
+        dither.build.build()
+
+        assert is_templated_content_correct(self.build_output_dir)
 
 if __name__ == '__main__':
-    test_build()
+    unittest.main()
