@@ -10,7 +10,16 @@ LATEST_BUILD_LINK_NAME = 'latest_build'
 TEST_TEMPLATED_FILE_NAME = '.test'
 TEST_TEMPLATE_NAME = TEST_TEMPLATED_FILE_NAME + '.template'
 
-def setup_test_dither_dir(base_dir):
+HOME_DIR_NAME = 'test_home_dir'
+DITHER_DIR_NAME = 'test_dither_files'
+
+BUILD_OUTPUT_SUBDIR_NAME = 'built_at_xxxx'
+BUILD_OUTPUT_FILE_NAME = '.testfile'
+
+LATEST_BUILD_SYMLINK_NAME = 'latest_build'
+INSTALLED_BUILD_SYMLINK_NAME = 'installed_build'
+
+def setup_test_dither_dir(base_dir, os=None):
     templates_dir = os.path.join(base_dir, TEMPLATES_DIR)
     build_output_dir = os.path.join(base_dir, BUILD_OUTPUT_DIR)
 
@@ -56,7 +65,8 @@ def resolve_symlink(symlink_path, os_module=None):
 
 class DitherIntegrationTestCase(unittest.TestCase):
 
-    def __init__(self, *args, os_module=None, safe_repr_func=None, **kwargs):
+    def __init__(self, *args, safe_repr_func=None, **kwargs):
+        os_module = kwargs.get('os_module')
         if os_module is None:
             import os as os_module
         self.os = os_module
@@ -106,3 +116,37 @@ class DitherIntegrationTestCase(unittest.TestCase):
                     default_msg="Link at {} doesn't point to {}".format(
                         self.safe_repr(link_path),
                         self.safe_repr(expected_link_target)))
+
+
+class CreateDitherSandboxDirMixin:
+
+    def __init__(self, *args, make_root_dir_func=None, **kwargs):
+        if make_root_dir_func is None:
+            from tempfile import mkdtemp as make_root_dir_func
+        self.make_root_dir = make_root_dir_func
+
+        os_module = kwargs.get('os_module')
+        if os_module is None:
+            import os as os_module
+        self.os = os_module
+
+        super().__init__(*args, **kwargs)
+
+    def create_dither_sandbox_dir(self):
+        self.sandbox_root_dir = self.make_root_dir()
+        self.home_dir = self.os.path.join(self.sandbox_root_dir, HOME_DIR_NAME)
+        self.os.mkdir(self.home_dir)
+        self.test_dither_dir = self.os.path.join(self.home_dir, DITHER_DIR_NAME)
+        self.os.mkdir(self.test_dither_dir)
+        self.templates_dir, self.build_output_dir = setup_test_dither_dir(
+                self.test_dither_dir, os=self.os)
+        self.build_output_subdir = self.os.path.join(
+            self.build_output_dir,
+            BUILD_OUTPUT_SUBDIR_NAME)
+
+    def change_cwd_to_sandbox_root_dir(self):
+        self.os.chdir(self.sandbox_root_dir)
+
+    def change_cwd_to_sandbox_dither_dir(self):
+        self.os.chdir(self.test_dither_dir)
+
