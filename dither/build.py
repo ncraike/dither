@@ -211,6 +211,3 @@ def build():
     renderer.run(use_reloader=False)
 
     create_latest_build_link(BUILD_OUTPUT_DIR, latest_build_path)
-
-    # enable automatic reloading
-    renderer.run(use_reloader=False)
