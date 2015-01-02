@@ -23,6 +23,9 @@ LATEST_BUILD_LINK_NAME = 'latest_build'
 #  - build_output_subdir: parent dirs must exist, may not exist, must
 #    be writeable
 #  - latest_build_link_path: may already exist, must be over-writeable
+#  - staticjinja module, particularly staticjinja.Renderer
+#  - jinja2 module, particularly jinja2.Environment and
+#    jinja2.FileSystemLoader
 #
 #  Just for context building (maybe move context to other module?):
 #  - hostname: may be derived in various ways (env vars, socket module)
