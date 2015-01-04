@@ -2,15 +2,24 @@ import os
 
 import click
 
+from dither.di import di
+import dither.config.defaults
+
 @click.group(
         name='dither',
 )
 def cli():
     pass
 
+def load_config_resource_providers():
+    di.providers.load(
+            dither.config.defaults.providers)
+
 @cli.command()
 def build():
     '''Builds new dotfiles from ./dither_templates.'''
+    load_config_resource_providers()
+
     from . import build
     build.build()
 

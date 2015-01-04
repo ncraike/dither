@@ -8,13 +8,7 @@ import jinja2
 
 from . import context
 
-TEMPLATES_DIR = 'dither_templates'
-BUILD_OUTPUT_DIR = 'built_dotfiles'
-OUTPUT_SUBDIR_FMT = 'built_at_{timestamp}'
-TIMESTAMP_FMT = '%Y-%m-%d_%H-%M-%S'
-TEMPLATE_EXTENSIONS = ('.template', '.tpl')
-CONTEXT_PATH = os.path.join(TEMPLATES_DIR, 'template_context.py')
-LATEST_BUILD_LINK_NAME = 'latest_build'
+from dither.di import di
 
 # Actual dependencies:
 #  - template_dir: given to staticjinja, must exist, be readable
@@ -52,19 +46,31 @@ def ensure_dir_exists(dir_path):
     if not os.path.exists(dir_path):
         os.makedirs(dir_path)
 
+@di.dependsOn('config.build.output.base_dir_name')
+@di.dependsOn('config.build.output.subdir_name_format')
+@di.dependsOn('config.timestamp_format')
 def get_build_output_subdir():
-    timestamp = datetime.datetime.now().strftime(TIMESTAMP_FMT)
-    subdir_name = OUTPUT_SUBDIR_FMT.format(timestamp=timestamp)
-    outpath = os.path.join(BUILD_OUTPUT_DIR, subdir_name)
+    (output_base_dir_name,
+            subdir_name_format,
+            timestamp_format) = di.resolver.unpack(get_build_output_subdir)
+
+    timestamp = datetime.datetime.now().strftime(timestamp_format)
+    subdir_name = subdir_name_format.format(timestamp=timestamp)
+    outpath = os.path.join(output_base_dir_name, subdir_name)
     ensure_dir_exists(outpath)
     return outpath
 
+@di.dependsOn('config.build.templates.extensions')
+@di.dependsOn('config.build.templates.context_path')
 class CustomRenderer(staticjinja.Renderer):
 
-    TEMPLATE_EXTENSIONS = ('.template', '.tpl')
+    def __init__(self, *args, **kwargs):
+        (self.template_extensions,
+                self.context_path) = di.resolver.unpack(CustomRenderer)
+        super().__init__(*args, **kwargs)
 
     def transform_template_path(self, template_path):
-        for extension in TEMPLATE_EXTENSIONS:
+        for extension in self.template_extensions:
             if template_path.endswith(extension):
                 # Strip extension from the end of the template_path
                 before, _unused, _unused = template_path.rpartition(extension)
@@ -78,7 +84,7 @@ class CustomRenderer(staticjinja.Renderer):
         if self.is_ignored(filename):
             return False
 
-        return not filename.endswith(self.TEMPLATE_EXTENSIONS)
+        return not filename.endswith(self.template_extensions)
 
     def is_partial(self, filename):
         '''Prevent files prefixed with '_' being considered partials.
@@ -90,10 +96,8 @@ class CustomRenderer(staticjinja.Renderer):
         '''
         if '__pycache__' in filename:
             return True
-        if filename == os.path.basename(CONTEXT_PATH):
+        if filename == os.path.basename(self.context_path):
             return True
-        if 'context' in filename:
-            raise Exception("filename is: {!r}".format(filename))
         return False
 
     def render_template(self, template, context=None, filepath=None):
@@ -111,6 +115,7 @@ class CustomRenderer(staticjinja.Renderer):
         return super(CustomRenderer, self).render_template(
                 template, context=context, filepath=filepath)
 
+@di.dependsOn('config.build.templates.context_path')
 def make_renderer(searchpath=None,
                   outpath=None,
                   contexts=None,
@@ -154,6 +159,8 @@ def make_renderer(searchpath=None,
     if outpath is None:
         raise ValueError("outpath must be given")
 
+    context_path = di.resolver.unpack(make_renderer)
+
     # Coerce search to an absolute path if it is not already
     searchpath = os.path.abspath(searchpath)
 
@@ -169,7 +176,7 @@ def make_renderer(searchpath=None,
                 os=context.get_os(),
                 os_family=context.get_os_family(),
                 hostname=context.get_hostname(),
-                context_path=CONTEXT_PATH,
+                context_path=context_path,
                 log=logger
         )
 
@@ -187,8 +194,11 @@ def make_renderer(searchpath=None,
                     staticpath=staticpath,
                     )
 
+@di.dependsOn('config.build.output.latest_build_link_name')
 def create_latest_build_link(build_output_dir, latest_build_path):
-    link_location = os.path.join(build_output_dir, LATEST_BUILD_LINK_NAME)
+    latest_build_link_name = di.resolver.unpack(create_latest_build_link)
+
+    link_location = os.path.join(build_output_dir, latest_build_link_name)
     if os.path.lexists(link_location):
         if not os.path.islink(link_location):
             raise Exception(
@@ -201,13 +211,19 @@ def create_latest_build_link(build_output_dir, latest_build_path):
             os.path.basename(latest_build_path),
             link_location)
 
+@di.dependsOn('config.build.templates.dir_name')
+@di.dependsOn('config.build.output.base_dir_name')
 def build():
+    templates_dir, output_base_dir_name = di.resolver.unpack(build)
+
+    # TODO Make this a resource
     latest_build_path = get_build_output_subdir()
 
+    # TODO Make this a resource
     renderer = make_renderer(
-            searchpath=TEMPLATES_DIR,
+            searchpath=templates_dir,
             outpath=latest_build_path)
 
     renderer.run(use_reloader=False)
 
-    create_latest_build_link(BUILD_OUTPUT_DIR, latest_build_path)
+    create_latest_build_link(output_base_dir_name, latest_build_path)

@@ -2,6 +2,9 @@ import os
 import unittest
 
 import dither.build
+import dither.config.defaults
+
+from dither.di import di
 
 from common import (
         DitherIntegrationTestCase,
@@ -21,11 +24,18 @@ def find_templated_file(build_output_dir):
         raise Exception("Can't find templated file at {!r}".format(filepath))
     return filepath
 
+def load_config_resource_providers():
+    di.providers.load(
+            dither.config.defaults.providers)
+
+
 class Test_build_output_is_as_expected(
         CreateDitherSandboxDirMixin,
         DitherIntegrationTestCase):
 
     def setUp(self):
+        load_config_resource_providers()
+
         self.create_dither_sandbox_dir()
 
         create_test_template(self.templates_dir)
