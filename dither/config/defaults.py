@@ -17,7 +17,7 @@ providers.register_instance(
 
 providers.register_instance(
         'config.build.templates.extensions',
-        ['.template', '.tpl'])
+        ('.template', '.tpl'))
 
 providers.register_instance(
         'config.build.templates.context_module_name',
@@ -31,7 +31,8 @@ def templates_context_path():
     # FIXME: Make os.path a resource
     import os.path
 
-    return os.path.join(templates_dir, context_module_name, '.py')
+    return os.path.join(
+            templates_dir_name, context_module_name + '.py')
 
 # FIXME: Use decorators
 providers.register_callable(
