@@ -2,6 +2,8 @@ import os
 import sys
 import importlib
 
+from dither.di import di
+
 # dependencies:
 # - (config) TEMPLATES_DIR
 # - (config) CONTEXT_PATH - depends on TEMPLATES_DIR
