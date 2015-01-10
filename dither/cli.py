@@ -26,6 +26,8 @@ def build():
 @cli.command()
 def link():
     '''Symlinks latest build into home directory.'''
+    load_config_resource_providers()
+
     from . import link
     link.link(
             base_build_dir=link.BASE_BUILD_DIR,

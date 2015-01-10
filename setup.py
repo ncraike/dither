@@ -64,7 +64,7 @@ setup(
     # requirements files see:
     # https://packaging.python.org/en/latest/technical.html#install-requires-vs-requirements-files
     install_requires=[
-            'fang',
+            'fang>=0.2.0,<0.3.0',
             'click',
             'colorama',
             'staticjinja',

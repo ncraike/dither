@@ -3,6 +3,9 @@ import tempfile
 import unittest
 
 import dither.link
+import dither.config.defaults
+
+from dither.di import di
 
 from common import (
         DitherIntegrationTestCase,
@@ -25,6 +28,9 @@ class TestLinkTestCase(
         DitherIntegrationTestCase):
 
     def setUp(self):
+        di.providers.load(
+                dither.config.defaults.providers)
+
         self.create_dither_sandbox_dir()
 
         self._create_test_build_output()
@@ -41,6 +47,9 @@ class TestLinkTestCase(
                 self.dot_dither_dotfiles_link_path, BUILD_OUTPUT_FILE_NAME)
 
         self.change_cwd_to_sandbox_dither_dir()
+
+    def tearDown(self):
+        di.providers.clear()
 
     def _create_test_build_output(self):
         self.os.mkdir(self.build_output_subdir)
