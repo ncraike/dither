@@ -43,6 +43,10 @@ providers.register_instance(
         'config.build.output.base_dir_name', 'built_dotfiles')
 
 providers.register_instance(
+        'config.build.output.subdir_name_prefix',
+        'built_at')
+
+providers.register_instance(
         'config.build.output.subdir_name_format',
         'built_at_{timestamp}')
 

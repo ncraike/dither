@@ -29,8 +29,9 @@ def link():
     load_config_resource_providers()
 
     from . import link
+    # TODO: Take these arguments from di's 'config.*' space
     link.link(
-            base_build_dir=link.BASE_BUILD_DIR,
+            base_build_dir='built_dotfiles',
             home_dir=os.path.expanduser('~'))
 
 @cli.command()

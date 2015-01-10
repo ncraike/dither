@@ -3,17 +3,7 @@ import os.path
 import re
 import datetime
 
-PROG_NAME = 'dither'
-
-BASE_BUILD_DIR = 'built_dotfiles'
-LATEST_BUILD_NAME = 'latest_build'
-BUILT_AT_PREFIX = 'built_at_'
-INSTALLED_BUILD_NAME = 'installed_build'
-
-TIMESTAMP_FMT = '%Y-%m-%d_%H-%M-%S'
-MOVE_TIMESTAMPED_FORMAT = '{original_name}.moved_by_{prog_name}_at_{timestamp}'
-
-HOME_DIR_LINK_NAME = '.dither_dotfiles'
+from dither.di import di
 
 # Actual dependencies:
 #  ...vary much more. Individual functions require and provide various
@@ -28,8 +18,13 @@ HOME_DIR_LINK_NAME = '.dither_dotfiles'
 #  - home_dir_link_name, we'll use this with the path to the user's home
 #    directory
 
+@di.dependsOn('config.build.output.latest_build_link_name')
 def _get_latest_build_subdir_from_link(build_dir):
-    latest_build_link_path = os.path.join(build_dir, LATEST_BUILD_NAME)
+    latest_build_link_name = di.resolver.unpack(
+            _get_latest_build_subdir_from_link)
+
+    latest_build_link_path = os.path.join(
+            build_dir, latest_build_link_name)
     if not (
             os.path.exists(latest_build_link_path) and
             os.path.islink(latest_build_link_path)):
@@ -43,10 +38,14 @@ def _get_latest_build_subdir_from_link(build_dir):
 
     return link_target
 
+@di.dependsOn('config.build.output.subdir_name_prefix')
 def _get_latest_build_subdir_by_file_sorting(build_dir):
+    build_output_prefix = di.resolver.unpack(
+            _get_latest_build_subdir_by_file_sorting)
+
     built_at_dirs = [
             name for name in os.listdir(build_dir)
-            if name.startswith(BUILT_AT_PREFIX) and
+            if name.startswith(build_output_prefix) and
                 os.path.isdir(os.path.join(build_dir, name))]
     if not built_at_dirs:
         return None
@@ -70,11 +69,15 @@ def find_latest_build_subdir(build_dir):
     else:
         return None
 
+@di.dependsOn('config.timestamp_format')
+@di.dependsOn('config.moved_file_filename_format')
 def move_to_timestamped_name(filepath):
-    timestamp = datetime.datetime.now().strftime(TIMESTAMP_FMT)
-    new_filepath = MOVE_TIMESTAMPED_FORMAT.format(
+    (timestamp_fmt, moved_file_filename_fmt
+            ) = di.resolver.unpack(move_to_timestamped_name)
+
+    timestamp = datetime.datetime.now().strftime(timestamp_fmt)
+    new_filepath = moved_file_filename_fmt.format(
             original_name=filepath,
-            prog_name=PROG_NAME,
             timestamp=timestamp)
     os.rename(filepath, new_filepath)
 
@@ -123,7 +126,13 @@ def create_links_for_each_file_in_dir(
                 created_link_target,
                 move_if_exists=True)
 
+@di.dependsOn('config.link.installed_build_link_name')
+@di.dependsOn('config.link.home_dir_link_name')
 def link(base_build_dir=None, home_dir=None):
+    (installed_build_link_name,
+            home_dir_link_name
+            ) = di.resolver.unpack(link)
+
     # Figure out what the latest build subdir is, usually by looking
     # for a "latest_build" symlink in build_dir
     latest_build_subdir = find_latest_build_subdir(base_build_dir)
@@ -134,11 +143,11 @@ def link(base_build_dir=None, home_dir=None):
 
     # Update "installed_build" link to point to latest build
     installed_build_link_path = os.path.join(
-            base_build_dir, INSTALLED_BUILD_NAME)
+            base_build_dir, installed_build_link_name)
     create_or_update_link(installed_build_link_path, latest_build_subdir)
 
     # Update ~/.dither_dotfiles/ to point to installed_build
-    home_dir_link_path = os.path.join(home_dir, HOME_DIR_LINK_NAME)
+    home_dir_link_path = os.path.join(home_dir, home_dir_link_name)
     create_or_update_link(
             home_dir_link_path,
             os.path.abspath(installed_build_link_path),
