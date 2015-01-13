@@ -25,6 +25,7 @@ providers.register_instance(
 
 @di.dependsOn('config.build.templates.dir_name')
 @di.dependsOn('config.build.templates.context_module_name')
+@providers.register('config.build.templates.context_path')
 def templates_context_path():
     templates_dir_name, context_module_name = di.resolver.unpack(
             templates_context_path)
@@ -33,11 +34,6 @@ def templates_context_path():
 
     return os.path.join(
             templates_dir_name, context_module_name + '.py')
-
-# FIXME: Use decorators
-providers.register_callable(
-        'config.build.templates.context_path',
-        templates_context_path)
 
 providers.register_instance(
         'config.build.output.base_dir_name', 'built_dotfiles')
@@ -63,10 +59,8 @@ providers.register_instance(
         '.dither_dotfiles')
 
 @di.dependsOn('config.program_name')
+@providers.register('config.moved_file_filename_format')
 def moved_file_filename_format():
     program_name = di.resolver.unpack(templates_context_path)
     return '{original_name}.moved_by_{program_name}_at_{timestamp}'.format(
             program_name=program_name)
-providers.register_callable(
-        'config.moved_file_filename_format',
-        moved_file_filename_format)
