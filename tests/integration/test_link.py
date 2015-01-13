@@ -4,6 +4,7 @@ import unittest
 
 import dither.link
 import dither.config.defaults
+import dither.utils
 
 from dither.di import di
 
@@ -23,13 +24,18 @@ BUILD_OUTPUT_FILE_NAME = '.testfile'
 LATEST_BUILD_SYMLINK_NAME = 'latest_build'
 INSTALLED_BUILD_SYMLINK_NAME = 'installed_build'
 
+def load_resource_providers():
+    di.providers.load(
+            dither.config.defaults.providers)
+    di.providers.load(
+            dither.utils.providers)
+
 class TestLinkTestCase(
         CreateDitherSandboxDirMixin,
         DitherIntegrationTestCase):
 
     def setUp(self):
-        di.providers.load(
-                dither.config.defaults.providers)
+        load_resource_providers()
 
         self.create_dither_sandbox_dir()
 

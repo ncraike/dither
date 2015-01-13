@@ -45,14 +45,14 @@ def ensure_dir_exists(dir_path):
 
 @di.dependsOn('config.build.output.base_dir_name')
 @di.dependsOn('config.build.output.subdir_name_format')
-@di.dependsOn('config.timestamp_format')
+@di.dependsOn('utils.run_timestamp')
 def get_build_output_subdir():
     (output_base_dir_name,
             subdir_name_format,
-            timestamp_format) = di.resolver.unpack(get_build_output_subdir)
+            run_timestamp
+            ) = di.resolver.unpack(get_build_output_subdir)
 
-    timestamp = datetime.datetime.now().strftime(timestamp_format)
-    subdir_name = subdir_name_format.format(timestamp=timestamp)
+    subdir_name = subdir_name_format.format(timestamp=run_timestamp)
     outpath = os.path.join(output_base_dir_name, subdir_name)
     ensure_dir_exists(outpath)
     return outpath

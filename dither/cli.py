@@ -3,7 +3,6 @@ import os
 import click
 
 from dither.di import di
-import dither.config.defaults
 
 @click.group(
         name='dither',
@@ -11,14 +10,18 @@ import dither.config.defaults
 def cli():
     pass
 
-def load_config_resource_providers():
+def load_resource_providers():
+    import dither.config.defaults
+    import dither.utils
     di.providers.load(
             dither.config.defaults.providers)
+    di.providers.load(
+            dither.utils.providers)
 
 @cli.command()
 def build():
     '''Builds new dotfiles from ./dither_templates.'''
-    load_config_resource_providers()
+    load_resource_providers()
 
     from . import build
     build.build()
@@ -26,7 +29,7 @@ def build():
 @cli.command()
 def link():
     '''Symlinks latest build into home directory.'''
-    load_config_resource_providers()
+    load_resource_providers()
 
     from . import link
     # TODO: Take these arguments from di's 'config.*' space
