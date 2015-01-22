@@ -23,6 +23,10 @@ def python_datetime_now():
 @providers.register('utils.run_timestamp')
 @lru_cache(maxsize=None)
 def give_run_timestamp():
+    '''
+    Give a timestamp which is generated the first time it's requested,
+    then re-used for the rest of the program execution.
+    '''
     (
             datetime_now,
             timestamp_format,
