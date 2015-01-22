@@ -13,10 +13,16 @@ def cli():
 def load_resource_providers():
     import dither.config.defaults
     import dither.utils
+    import dither.build.core
+    import dither.build.render
     di.providers.load(
             dither.config.defaults.providers)
     di.providers.load(
             dither.utils.providers)
+    di.providers.load(
+            dither.build.core.providers)
+    di.providers.load(
+            dither.build.render.providers)
 
 @cli.command()
 def build():
@@ -43,4 +49,3 @@ def update(context):
     '''Performs the "build" and "link" steps.'''
     context.forward(build)
     context.forward(link)
-

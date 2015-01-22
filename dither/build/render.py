@@ -3,10 +3,14 @@ import logging
 
 import staticjinja
 import jinja2
+from fang import ResourceProviderRegister
 
 from dither.di import di
 
 from . import context
+
+providers = ResourceProviderRegister(
+        '.com.ncraike.dither')
 
 def get_logger():
     logger = logging.getLogger(__name__)
@@ -148,3 +152,14 @@ def make_renderer(searchpath=None,
                     contexts=context_mappings,
                     staticpath=staticpath,
                     )
+
+
+@di.dependsOn('config.build.templates.dir_name')
+@di.dependsOn('build.output.path')
+@providers.register('build.renderer')
+def provide_renderer():
+    templates_dir, latest_build_path = di.resolver.unpack(provide_renderer)
+
+    return make_renderer(
+            searchpath=templates_dir,
+            outpath=latest_build_path)

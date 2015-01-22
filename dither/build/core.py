@@ -3,9 +3,14 @@ import os
 import sys
 import datetime
 
+from fang import ResourceProviderRegister
+
 from . import render
 
 from dither.di import di
+
+providers = ResourceProviderRegister(
+        '.com.ncraike.dither')
 
 # Actual dependencies:
 #  - template_dir: given to staticjinja, must exist, be readable
@@ -46,6 +51,7 @@ def ensure_dir_exists(dir_path):
 @di.dependsOn('config.build.output.base_dir_name')
 @di.dependsOn('config.build.output.subdir_name_format')
 @di.dependsOn('utils.run_timestamp')
+@providers.register('build.output.path')
 def get_build_output_subdir():
     (output_base_dir_name,
             subdir_name_format,
@@ -74,19 +80,13 @@ def create_latest_build_link(build_output_dir, latest_build_path):
             os.path.basename(latest_build_path),
             link_location)
 
-@di.dependsOn('config.build.templates.dir_name')
+@di.dependsOn('build.renderer')
 @di.dependsOn('config.build.output.base_dir_name')
+@di.dependsOn('build.output.path')
 def build():
-    templates_dir, output_base_dir_name = di.resolver.unpack(build)
-
-    # TODO Make this a resource
-    latest_build_path = get_build_output_subdir()
-
-    # TODO Make this a resource
-    renderer = render.make_renderer(
-            searchpath=templates_dir,
-            outpath=latest_build_path)
+    (renderer,
+            output_base_dir_name,
+            latest_build_path) = di.resolver.unpack(build)
 
     renderer.run(use_reloader=False)
-
     create_latest_build_link(output_base_dir_name, latest_build_path)

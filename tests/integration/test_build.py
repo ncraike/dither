@@ -2,6 +2,8 @@ import os
 import unittest
 
 import dither.build
+import dither.build.core
+import dither.build.render
 import dither.config.defaults
 import dither.utils
 
@@ -30,6 +32,10 @@ def load_resource_providers():
             dither.config.defaults.providers)
     di.providers.load(
             dither.utils.providers)
+    di.providers.load(
+            dither.build.core.providers)
+    di.providers.load(
+            dither.build.render.providers)
 
 class Test_build_output_is_as_expected(
         CreateDitherSandboxDirMixin,

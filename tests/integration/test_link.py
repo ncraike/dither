@@ -2,8 +2,10 @@ import tempfile
 
 import unittest
 
-import dither.link
 import dither.config.defaults
+import dither.build.core
+import dither.build.render
+import dither.link
 import dither.utils
 
 from dither.di import di
@@ -29,6 +31,10 @@ def load_resource_providers():
             dither.config.defaults.providers)
     di.providers.load(
             dither.utils.providers)
+    di.providers.load(
+            dither.build.core.providers)
+    di.providers.load(
+            dither.build.render.providers)
 
 class TestLinkTestCase(
         CreateDitherSandboxDirMixin,
