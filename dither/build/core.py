@@ -1,7 +1,4 @@
 import logging
-import os
-import sys
-import datetime
 
 from fang import ResourceProviderRegister
 
@@ -44,40 +41,48 @@ def get_logger():
     logger.addHandler(logging.StreamHandler())
     return logger
 
-def ensure_dir_exists(dir_path):
-    if not os.path.exists(dir_path):
-        os.makedirs(dir_path)
-
 @di.dependsOn('config.build.output.base_dir_name')
 @di.dependsOn('config.build.output.subdir_name_format')
 @di.dependsOn('utils.run_timestamp')
+@di.dependsOn('.org.python.stdlib.os.path')
+@di.dependsOn('utils.ensure_dir_exists')
 @providers.register('build.output.path')
 def get_build_output_subdir():
     (output_base_dir_name,
             subdir_name_format,
-            run_timestamp
+            run_timestamp,
+            os_path,
+            ensure_dir_exists
             ) = di.resolver.unpack(get_build_output_subdir)
 
     subdir_name = subdir_name_format.format(timestamp=run_timestamp)
-    outpath = os.path.join(output_base_dir_name, subdir_name)
+    # TODO Replace os.path use with pathlib
+    outpath = os_path.join(output_base_dir_name, subdir_name)
     ensure_dir_exists(outpath)
     return outpath
 
 @di.dependsOn('config.build.output.latest_build_link_name')
+@di.dependsOn('.org.python.stdlib.os.path')
+@di.dependsOn('.org.python.stdlib.os:remove')
+@di.dependsOn('.org.python.stdlib.os:symlink')
 def create_latest_build_link(build_output_dir, latest_build_path):
-    latest_build_link_name = di.resolver.unpack(create_latest_build_link)
+    (latest_build_link_name,
+            os_path,
+            remove,
+            symlink) = di.resolver.unpack(create_latest_build_link)
 
-    link_location = os.path.join(build_output_dir, latest_build_link_name)
-    if os.path.lexists(link_location):
-        if not os.path.islink(link_location):
+    # TODO Replace os.path use with pathlib
+    link_location = os_path.join(build_output_dir, latest_build_link_name)
+    if os_path.lexists(link_location):
+        if not os_path.islink(link_location):
             raise Exception(
                     "{!r} already exists, but isn't a symlink. Cautiously not "
                     "removing it.".format(link_location))
-        os.remove(link_location)
+        remove(link_location)
 
-    # XXX TODO Clean this up, maybe use functions from link module
-    os.symlink(
-            os.path.basename(latest_build_path),
+    # TODO Clean this up, maybe use functions from link module
+    symlink(
+            os_path.basename(latest_build_path),
             link_location)
 
 @di.dependsOn('build.renderer')
