@@ -28,6 +28,7 @@ def find_templated_file(build_output_dir):
     return filepath
 
 def load_resource_providers():
+    di.providers.clear()
     di.providers.load(
             dither.config.defaults.providers)
     di.providers.load(

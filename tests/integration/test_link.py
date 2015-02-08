@@ -27,6 +27,7 @@ LATEST_BUILD_SYMLINK_NAME = 'latest_build'
 INSTALLED_BUILD_SYMLINK_NAME = 'installed_build'
 
 def load_resource_providers():
+    di.providers.clear()
     di.providers.load(
             dither.config.defaults.providers)
     di.providers.load(
