@@ -1,5 +1,6 @@
 
 from collections import namedtuple
+from functools import partial, update_wrapper
 
 import pytest
 
@@ -21,8 +22,16 @@ def di_providers(request):
 def functions_called():
     return []
 
+
+def call_proxy(func):
+    def proxy(*args, **kwargs):
+        return func(*args, **kwargs)
+
+    functools.update_wrapper(proxy, func)
+    return proxy
+
 def test_get_build_output_subdir__gives_expected_output(
-        di_providers, functions_called):
+        di_providers, recorded_calls):
 
     di_providers.mass_register({
         # The config values here are a little different to what are
@@ -47,10 +56,11 @@ def test_get_build_output_subdir__gives_expected_output(
         return fake_os_path_module(
                 join=fake_join)
 
-    @di_providers.register_instance('utils.ensure_dir_exists')
-    def fake_ensure_dir_exists(dir_path):
-        functions_called.append(fake_ensure_dir_exists)
-        return
+    def fake_ensure_dir_exists(dir_path): pass
+
+    di_providers.register_instance(
+            'utils.ensure_dir_exists',
+            recorded_calls.recorded(fake_ensure_dir_exists))
 
     #
     # Test body
@@ -61,5 +71,4 @@ def test_get_build_output_subdir__gives_expected_output(
     result = build_core.get_build_output_subdir()
     assert (result ==
             'build_output_dir/built_at_time_2000-01-01_06.30.59_by_dither')
-
-    assert fake_ensure_dir_exists in functions_called
+    assert fake_ensure_dir_exists in recorded_calls.by_func
