@@ -9,10 +9,6 @@ from dither.di import di
 # Module under test
 import dither.build.core as build_core
 
-def are_all_dependencies_met_for(dependent):
-    di.resolver.resolve_all_dependencies(dependent)
-    return True
-
 @pytest.fixture(scope='function')
 def di_providers(request):
     di.providers.clear()
@@ -53,7 +49,7 @@ def test_get_build_output_subdir__gives_expected_output(
     #
     # Test body
     #
-    assert are_all_dependencies_met_for(
+    assert di.resolver.are_all_dependencies_met_for(
             build_core.get_build_output_subdir)
 
     result = build_core.get_build_output_subdir()
