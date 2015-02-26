@@ -18,18 +18,6 @@ def di_providers(request):
     di.providers.clear()
     return di.providers
 
-@pytest.fixture
-def functions_called():
-    return []
-
-
-def call_proxy(func):
-    def proxy(*args, **kwargs):
-        return func(*args, **kwargs)
-
-    functools.update_wrapper(proxy, func)
-    return proxy
-
 def test_get_build_output_subdir__gives_expected_output(
         di_providers, recorded_calls):
 
