@@ -10,76 +10,72 @@ from dither.di import di
 import dither.build.core as build_core
 
 @pytest.fixture(scope='function')
-def di_providers(request):
+def di_providers():
     di.providers.clear()
     return di.providers
 
-def test_get_build_output_subdir__gives_expected_result(
-        di_providers):
+@pytest.fixture(scope='function')
+def register_fake_config(di_providers):
+    '''
+    Configure DI with a small set of config values.
 
+    The config values here are a little different to what are used in
+    production, to ensure the code under test is actually asking the
+    config system, instead of eg just using its own constants.
+    '''
     di_providers.mass_register({
-        # The config values here are a little different to what are
-        # used in production, to ensure the code under test is
-        # actually asking the config system, and not just using its
-        # own constants which happen to match the normal configured
-        # values.
         'config.build.output.base_dir_name': 'build_output_dir',
         'config.build.output.subdir_name_format':
                 'built_at_time_{timestamp}_by_dither',
-        # We give a fixed timestamp here rather than asking the
-        # system clock via the datetime module
+    })
+
+@pytest.fixture(scope='function')
+def register_fake_run_timestamp(di_providers):
+    '''
+    Configure DI to give a fixed timestamp for utils.run_timestamp,
+    rather than asking the system clock.
+    '''
+    di_providers.mass_register({
         'utils.run_timestamp': '2000-01-01_06.30.59',
     })
 
-    @di_providers.register_instance('.org.python.stdlib.os:path.join')
-    def fake_path_join(left, right):
-        return left + '/' + right
+def fake_os_path_join(left, right):
+    return left + '/' + right
 
-    @di_providers.register_instance('utils.ensure_dir_exists')
-    def fake_ensure_dir_exists(dir_path):
-        pass
+def fake_ensure_dir_exists(dir_path):
+    pass
 
-    #
-    # Test body
-    #
+def test_get_build_output_subdir__gives_expected_result(
+        di_providers,
+        register_fake_config,
+        register_fake_run_timestamp):
+
+    di_providers.register_instance(
+            '.org.python.stdlib.os:path.join', fake_os_path_join)
+    di_providers.register_instance(
+            'utils.ensure_dir_exists', fake_ensure_dir_exists)
+
     assert di.resolver.are_all_dependencies_met_for(
             build_core.get_build_output_subdir)
 
     # Function under test
     result = build_core.get_build_output_subdir()
+
     assert (result ==
             'build_output_dir/built_at_time_2000-01-01_06.30.59_by_dither')
 
 def test_get_build_output_subdir__calls_ensure_dir_exists_with_path(
-        di_providers, recorded_calls):
+        di_providers,
+        register_fake_config,
+        register_fake_run_timestamp,
+        recorded_calls):
 
-    di_providers.mass_register({
-        # The config values here are a little different to what are
-        # used in production, to ensure the code under test is
-        # actually asking the config system, and not just using its
-        # own constants which happen to match the normal configured
-        # values.
-        'config.build.output.base_dir_name': 'build_output_dir',
-        'config.build.output.subdir_name_format':
-                'built_at_time_{timestamp}_by_dither',
-        # We give a fixed timestamp here rather than asking the
-        # system clock via the datetime module
-        'utils.run_timestamp': '2000-01-01_06.30.59',
-    })
-
-    @di_providers.register_instance('.org.python.stdlib.os:path.join')
-    def fake_path_join(left, right):
-        return left + '/' + right
-
-    def fake_ensure_dir_exists(dir_path):
-        pass
+    di_providers.register_instance(
+            '.org.python.stdlib.os:path.join', fake_os_path_join)
     di_providers.register_instance(
             'utils.ensure_dir_exists',
             recorded_calls.recorded(fake_ensure_dir_exists))
 
-    #
-    # Test body
-    #
     assert di.resolver.are_all_dependencies_met_for(
             build_core.get_build_output_subdir)
 
