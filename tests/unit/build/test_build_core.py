@@ -31,17 +31,12 @@ def test_get_build_output_subdir__gives_expected_output(
         'utils.run_timestamp': '2000-01-01_06.30.59',
     })
 
-    @di_providers.register('.org.python.stdlib.os:path')
-    def give_fake_os_path():
-        fake_os_path_module = namedtuple('fake_os_path', ['join'])
-        def fake_join(left, right):
-            return left + '/' + right
+    @di_providers.register_instance('.org.python.stdlib.os:path.join')
+    def fake_path_join(left, right):
+        return left + '/' + right
 
-        return fake_os_path_module(
-                join=fake_join)
-
-    def fake_ensure_dir_exists(dir_path): pass
-
+    def fake_ensure_dir_exists(dir_path):
+        pass
     di_providers.register_instance(
             'utils.ensure_dir_exists',
             recorded_calls.recorded(fake_ensure_dir_exists))

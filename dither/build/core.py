@@ -44,20 +44,20 @@ def get_logger():
 @di.dependsOn('config.build.output.base_dir_name')
 @di.dependsOn('config.build.output.subdir_name_format')
 @di.dependsOn('utils.run_timestamp')
-@di.dependsOn('.org.python.stdlib.os:path')
+@di.dependsOn('.org.python.stdlib.os:path.join')
 @di.dependsOn('utils.ensure_dir_exists')
 @providers.register('build.output.path')
 def get_build_output_subdir():
     (output_base_dir_name,
             subdir_name_format,
             run_timestamp,
-            os_path,
+            os_path_join,
             ensure_dir_exists
             ) = di.resolver.unpack(get_build_output_subdir)
 
     subdir_name = subdir_name_format.format(timestamp=run_timestamp)
     # TODO Replace os.path use with pathlib
-    outpath = os_path.join(output_base_dir_name, subdir_name)
+    outpath = os_path_join(output_base_dir_name, subdir_name)
     ensure_dir_exists(outpath)
     return outpath
 
