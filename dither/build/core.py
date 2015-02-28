@@ -44,7 +44,7 @@ def get_logger():
 @di.dependsOn('config.build.output.base_dir_name')
 @di.dependsOn('config.build.output.subdir_name_format')
 @di.dependsOn('utils.run_timestamp')
-@di.dependsOn('.org.python.stdlib.os.path')
+@di.dependsOn('.org.python.stdlib.os:path')
 @di.dependsOn('utils.ensure_dir_exists')
 @providers.register('build.output.path')
 def get_build_output_subdir():
@@ -62,7 +62,7 @@ def get_build_output_subdir():
     return outpath
 
 @di.dependsOn('config.build.output.latest_build_link_name')
-@di.dependsOn('.org.python.stdlib.os.path')
+@di.dependsOn('.org.python.stdlib.os:path')
 @di.dependsOn('.org.python.stdlib.os:remove')
 @di.dependsOn('.org.python.stdlib.os:symlink')
 def create_latest_build_link(build_output_dir, latest_build_path):

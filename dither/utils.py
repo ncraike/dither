@@ -31,16 +31,22 @@ def python_os_symlink():
     return os.symlink
 
 @di.dependsOn('.org.python.stdlib.os')
-@providers.register('.org.python.stdlib.os.path')
+@providers.register('.org.python.stdlib.os:path')
 def python_os_path_module():
     os = di.resolver.unpack(python_os_path_module)
     return os.path
 
-@di.dependsOn('.org.python.stdlib.os.path')
-@providers.register('.org.python.stdlib.os.path:exists')
+@di.dependsOn('.org.python.stdlib.os')
+@providers.register('.org.python.stdlib.os:path.exists')
 def python_os_path_exists():
-    os_path = di.resolver.unpack(python_os_path_exists)
-    return os_path.exists
+    os = di.resolver.unpack(python_os_path_exists)
+    return os.path.exists
+
+@di.dependsOn('.org.python.stdlib.os')
+@providers.register('.org.python.stdlib.os:path.join')
+def python_os_path_join():
+    os = di.resolver.unpack(python_os_path_join)
+    return os.path.join
 
 @providers.register('.org.python.stdlib.datetime')
 def python_datetime_module():
@@ -69,7 +75,7 @@ def give_run_timestamp():
 
     return datetime_now().strftime(timestamp_format)
 
-@di.dependsOn('.org.python.stdlib.os.path:exists')
+@di.dependsOn('.org.python.stdlib.os:path.exists')
 @di.dependsOn('.org.python.stdlib.os:makedirs')
 @providers.register_instance('utils.ensure_dir_exists')
 def ensure_dir_exists(dir_path):

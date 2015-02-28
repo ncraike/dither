@@ -31,7 +31,7 @@ def test_get_build_output_subdir__gives_expected_output(
         'utils.run_timestamp': '2000-01-01_06.30.59',
     })
 
-    @di_providers.register('.org.python.stdlib.os.path')
+    @di_providers.register('.org.python.stdlib.os:path')
     def give_fake_os_path():
         fake_os_path_module = namedtuple('fake_os_path', ['join'])
         def fake_join(left, right):
