@@ -27,6 +27,7 @@ def register_fake_config(di_providers):
         'config.build.output.base_dir_name': 'build_output_dir',
         'config.build.output.subdir_name_format':
                 'built_at_time_{timestamp}_by_dither',
+        'config.build.output.latest_build_link_name': 'newest_build',
     })
 
 @pytest.fixture(scope='function')
@@ -39,11 +40,34 @@ def register_fake_run_timestamp(di_providers):
         'utils.run_timestamp': '2000-01-01_06.30.59',
     })
 
+#
+# XXX Not sure if the fake_os_path_* funcs should do so much
+#
 def fake_os_path_join(left, right):
     return left + '/' + right
 
+def fake_os_path_basename(path):
+    if '/' in path:
+        last_slash_pos = path.rfind('/')
+        return path[last_slash_pos+1:]
+    else:
+        return path
+
+def fake_os_remove(filename):
+    pass
+
+def fake_os_symlink(link_target_path, link_name):
+    pass
+
 def fake_ensure_dir_exists(dir_path):
     pass
+
+FakeOsPathModule = namedtuple('FakeOsPathModule', [
+    'basename',
+    'islink',
+    'join',
+    'lexists',
+    ])
 
 def test_get_build_output_subdir__gives_expected_result(
         di_providers,
@@ -87,3 +111,59 @@ def test_get_build_output_subdir__calls_ensure_dir_exists_with_path(
     calls_of_func = recorded_calls.by_func[fake_ensure_dir_exists]
     assert len(calls_of_func) == 1
     assert calls_of_func[0].args == (result,)
+
+def test_create_latest_build_link__returns_none(
+        di_providers,
+        register_fake_config):
+
+    fake_os_path = FakeOsPathModule(
+            basename=fake_os_path_basename,
+            join=fake_os_path_join,
+            lexists=lambda path: False,
+            islink=lambda path: False)
+    di_providers.register_instance(
+            '.org.python.stdlib.os:path', fake_os_path)
+    di_providers.register_instance(
+            '.org.python.stdlib.os:remove', fake_os_remove)
+    di_providers.register_instance(
+            '.org.python.stdlib.os:symlink', fake_os_symlink)
+
+    assert di.resolver.are_all_dependencies_met_for(
+            build_core.create_latest_build_link)
+
+    # Function under test
+    result = build_core.create_latest_build_link(
+            'some_dir/my_builds', 'built_a_moment_ago')
+    assert result == None
+
+def test_create_latest_build_link__calls_symlink_as_expected(
+        di_providers,
+        register_fake_config,
+        recorded_calls):
+
+    fake_os_path = FakeOsPathModule(
+            basename=fake_os_path_basename,
+            join=fake_os_path_join,
+            lexists=lambda path: False,
+            islink=lambda path: False)
+    di_providers.register_instance(
+            '.org.python.stdlib.os:path', fake_os_path)
+    di_providers.register_instance(
+            '.org.python.stdlib.os:remove', fake_os_remove)
+    di_providers.register_instance(
+            '.org.python.stdlib.os:symlink',
+            recorded_calls.recorded(fake_os_symlink))
+
+    assert di.resolver.are_all_dependencies_met_for(
+            build_core.create_latest_build_link)
+
+    # Function under test
+    result = build_core.create_latest_build_link(
+            'some_dir/my_builds', 'some_dir/built_a_moment_ago')
+
+    # Test fake_os_symlink was called once, and with expected args
+    assert fake_os_symlink in recorded_calls.by_func
+    calls_of_func = recorded_calls.by_func[fake_os_symlink]
+    assert len(calls_of_func) == 1
+    assert calls_of_func[0].args == (
+            'built_a_moment_ago', 'some_dir/my_builds/newest_build')
