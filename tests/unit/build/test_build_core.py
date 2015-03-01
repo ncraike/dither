@@ -69,7 +69,7 @@ FakeOsPathModule = namedtuple('FakeOsPathModule', [
     'lexists',
     ])
 
-def test_get_build_output_subdir__gives_expected_result(
+def test_get_build_output_subdir__returns_expected_result(
         di_providers,
         register_fake_config,
         register_fake_run_timestamp):
