@@ -258,3 +258,35 @@ def test_create_latest_build_link__doesnt_remove_if_path_exists_and_is_not_link(
     # Test fake_os_remove was _not called_
     assert fake_os_remove not in recorded_calls.by_func, (
             'os:remove was called')
+
+def test_create_latest_build_link__doesnt_symlink_if_path_exists_and_is_not_link(
+        di_providers,
+        register_fake_config,
+        recorded_calls):
+
+    fake_os_path = FakeOsPathModule(
+            basename=fake_os_path_basename,
+            join=fake_os_path_join,
+            lexists=lambda path: True,
+            islink=lambda path: False)
+    di_providers.register_instance(
+            '.org.python.stdlib.os:path', fake_os_path)
+    di_providers.register_instance(
+            '.org.python.stdlib.os:remove', fake_os_remove)
+    di_providers.register_instance(
+            '.org.python.stdlib.os:symlink',
+            recorded_calls.recorded(fake_os_symlink))
+
+    assert di.resolver.are_all_dependencies_met_for(
+            build_core.create_latest_build_link)
+
+    # Function under test
+    try:
+        result = build_core.create_latest_build_link(
+                'some_dir/my_builds', 'some_dir/built_a_moment_ago')
+    except:
+        pass
+
+    # Test fake_os_symlink was _not called_
+    assert fake_os_symlink not in recorded_calls.by_func, (
+            'os:symlink was called')
