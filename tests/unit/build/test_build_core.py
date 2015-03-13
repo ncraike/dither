@@ -215,8 +215,7 @@ def test_create_latest_build_link__raises_if_path_exists_and_is_not_link(
     di_providers.register_instance(
             '.org.python.stdlib.os:path', fake_os_path)
     di_providers.register_instance(
-            '.org.python.stdlib.os:remove',
-            fake_os_remove)
+            '.org.python.stdlib.os:remove', fake_os_remove)
     di_providers.register_instance(
             '.org.python.stdlib.os:symlink', fake_os_symlink)
 
