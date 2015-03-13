@@ -194,10 +194,13 @@ def test_create_latest_build_link__removes_if_path_exists_and_is_link(
             'some_dir/my_builds', 'some_dir/built_a_moment_ago')
 
     # Test fake_os_remove was called once, and with expected args
-    assert fake_os_remove in recorded_calls.by_func
+    assert fake_os_remove in recorded_calls.by_func, (
+            "os:remove wasn't called")
     calls_of_func = recorded_calls.by_func[fake_os_remove]
-    assert len(calls_of_func) == 1
-    assert calls_of_func[0].args == ('some_dir/my_builds/newest_build',)
+    assert len(calls_of_func) == 1, (
+            "os:remove should have been called exactly once")
+    assert calls_of_func[0].args == ('some_dir/my_builds/newest_build',), (
+            "os:remove wasn't called with expected args")
 
 def test_create_latest_build_link__raises_if_path_exists_and_is_not_link(
         di_providers,
