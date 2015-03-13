@@ -198,3 +198,29 @@ def test_create_latest_build_link__removes_if_path_exists_and_is_link(
     calls_of_func = recorded_calls.by_func[fake_os_remove]
     assert len(calls_of_func) == 1
     assert calls_of_func[0].args == ('some_dir/my_builds/newest_build',)
+
+def test_create_latest_build_link__raises_if_path_exists_and_is_not_link(
+        di_providers,
+        register_fake_config,
+        recorded_calls):
+
+    fake_os_path = FakeOsPathModule(
+            basename=fake_os_path_basename,
+            join=fake_os_path_join,
+            lexists=lambda path: True,
+            islink=lambda path: False)
+    di_providers.register_instance(
+            '.org.python.stdlib.os:path', fake_os_path)
+    di_providers.register_instance(
+            '.org.python.stdlib.os:remove',
+            fake_os_remove)
+    di_providers.register_instance(
+            '.org.python.stdlib.os:symlink', fake_os_symlink)
+
+    assert di.resolver.are_all_dependencies_met_for(
+            build_core.create_latest_build_link)
+
+    # Function under test
+    with pytest.raises(Exception):
+        result = build_core.create_latest_build_link(
+                'some_dir/my_builds', 'some_dir/built_a_moment_ago')
