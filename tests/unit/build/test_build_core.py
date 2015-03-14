@@ -69,6 +69,9 @@ FakeOsPathModule = namedtuple('FakeOsPathModule', [
     'lexists',
     ])
 
+def fake_renderer_run(use_reloader='use_reloader default value'):
+    pass
+
 def test_get_build_output_subdir__returns_expected_result(
         di_providers,
         register_fake_config,
@@ -290,3 +293,92 @@ def test_create_latest_build_link__doesnt_symlink_if_path_exists_and_is_not_link
     # Test fake_os_symlink was _not called_
     assert fake_os_symlink not in recorded_calls.by_func, (
             'os:symlink was called')
+
+FakeRenderer = namedtuple('FakeRenderer', [
+    'run'])
+
+def fake_create_latest_build_link(
+        output_base_dir_name, latest_build_link_path):
+    pass
+
+def test_build__returns_None(
+        di_providers,
+        register_fake_config,
+        recorded_calls):
+
+    fake_renderer = FakeRenderer(
+            run=fake_renderer_run)
+
+    di.providers.register_instance(
+            'build.renderer', fake_renderer)
+    di.providers.register_instance(
+            'build.output.path', 'fake/build_output_dir/just_now')
+    di.providers.register_instance(
+            'build.output.create_latest_build_link',
+            fake_create_latest_build_link)
+
+    assert di.resolver.are_all_dependencies_met_for(
+            build_core.build)
+
+    # Function under test
+    result = build_core.build()
+
+    assert result == None
+
+def test_build__calls_renderer_run(
+        di_providers,
+        register_fake_config,
+        recorded_calls):
+
+    fake_renderer = FakeRenderer(
+            run=recorded_calls.recorded(fake_renderer_run))
+
+    di.providers.register_instance(
+            'build.renderer', fake_renderer)
+    di.providers.register_instance(
+            'build.output.path', 'fake/build_output_dir/just_now')
+    di.providers.register_instance(
+            'build.output.create_latest_build_link',
+            fake_create_latest_build_link)
+
+    assert di.resolver.are_all_dependencies_met_for(
+            build_core.build)
+
+    # Function under test
+    result = build_core.build()
+
+    # Test fake_renderer_run was called once, and with expected args
+    assert fake_renderer_run in recorded_calls.by_func
+    calls_of_func = recorded_calls.by_func[fake_renderer_run]
+    assert len(calls_of_func) == 1
+    assert calls_of_func[0].args == ()
+    assert calls_of_func[0].kwargs == {'use_reloader': False}
+
+def test_build__calls_create_latest_build_link(
+        di_providers,
+        register_fake_config,
+        recorded_calls):
+
+    fake_renderer = FakeRenderer(
+            run=recorded_calls.recorded(fake_renderer_run))
+
+    di.providers.register_instance(
+            'build.renderer', fake_renderer)
+    di.providers.register_instance(
+            'build.output.path', 'build_output_dir/my_build_just_now')
+    di.providers.register_instance(
+            'build.output.create_latest_build_link',
+            recorded_calls.recorded(fake_create_latest_build_link))
+
+    assert di.resolver.are_all_dependencies_met_for(
+            build_core.build)
+
+    # Function under test
+    result = build_core.build()
+
+    # Test fake_create_latest_build_link was called once, and with expected args
+    assert fake_create_latest_build_link in recorded_calls.by_func
+    calls_of_func = recorded_calls.by_func[fake_create_latest_build_link]
+    assert len(calls_of_func) == 1
+    assert calls_of_func[0].args == (
+            'build_output_dir', 'build_output_dir/my_build_just_now')
