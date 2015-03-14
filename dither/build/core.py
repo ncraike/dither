@@ -65,6 +65,7 @@ def get_build_output_subdir():
 @di.dependsOn('.org.python.stdlib.os:path')
 @di.dependsOn('.org.python.stdlib.os:remove')
 @di.dependsOn('.org.python.stdlib.os:symlink')
+@providers.register_instance('build.output.create_latest_build_link')
 def create_latest_build_link(build_output_dir, latest_build_path):
     (latest_build_link_name,
             os_path,
@@ -88,10 +89,12 @@ def create_latest_build_link(build_output_dir, latest_build_path):
 @di.dependsOn('build.renderer')
 @di.dependsOn('config.build.output.base_dir_name')
 @di.dependsOn('build.output.path')
+@di.dependsOn('build.output.create_latest_build_link')
 def build():
     (renderer,
             output_base_dir_name,
-            latest_build_path) = di.resolver.unpack(build)
+            latest_build_path,
+            create_latest_build_link) = di.resolver.unpack(build)
 
     renderer.run(use_reloader=False)
     create_latest_build_link(output_base_dir_name, latest_build_path)
