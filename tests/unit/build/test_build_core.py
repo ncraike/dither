@@ -110,8 +110,8 @@ def test_get_build_output_subdir__calls_ensure_dir_exists_with_path(
     result = build_core.get_build_output_subdir()
 
     # Test fake_ensure_dir_exists was called, and with expected args
-    assert fake_ensure_dir_exists in recorded_calls.by_func
-    calls_of_func = recorded_calls.by_func[fake_ensure_dir_exists]
+    assert fake_ensure_dir_exists in recorded_calls
+    calls_of_func = recorded_calls[fake_ensure_dir_exists]
     assert len(calls_of_func) == 1
     assert calls_of_func[0].args == (result,)
 
@@ -165,8 +165,8 @@ def test_create_latest_build_link__calls_symlink_as_expected(
             'some_dir/my_builds', 'some_dir/built_a_moment_ago')
 
     # Test fake_os_symlink was called once, and with expected args
-    assert fake_os_symlink in recorded_calls.by_func
-    calls_of_func = recorded_calls.by_func[fake_os_symlink]
+    assert fake_os_symlink in recorded_calls
+    calls_of_func = recorded_calls[fake_os_symlink]
     assert len(calls_of_func) == 1
     assert calls_of_func[0].args == (
             'built_a_moment_ago', 'some_dir/my_builds/newest_build')
@@ -197,9 +197,9 @@ def test_create_latest_build_link__removes_if_path_exists_and_is_link(
             'some_dir/my_builds', 'some_dir/built_a_moment_ago')
 
     # Test fake_os_remove was called once, and with expected args
-    assert fake_os_remove in recorded_calls.by_func, (
+    assert fake_os_remove in recorded_calls, (
             "os:remove wasn't called")
-    calls_of_func = recorded_calls.by_func[fake_os_remove]
+    calls_of_func = recorded_calls[fake_os_remove]
     assert len(calls_of_func) == 1, (
             "os:remove should have been called exactly once")
     assert calls_of_func[0].args == ('some_dir/my_builds/newest_build',), (
@@ -259,7 +259,7 @@ def test_create_latest_build_link__doesnt_remove_if_path_exists_and_is_not_link(
         pass
 
     # Test fake_os_remove was _not called_
-    assert fake_os_remove not in recorded_calls.by_func, (
+    assert fake_os_remove not in recorded_calls, (
             'os:remove was called')
 
 def test_create_latest_build_link__doesnt_symlink_if_path_exists_and_is_not_link(
@@ -291,7 +291,7 @@ def test_create_latest_build_link__doesnt_symlink_if_path_exists_and_is_not_link
         pass
 
     # Test fake_os_symlink was _not called_
-    assert fake_os_symlink not in recorded_calls.by_func, (
+    assert fake_os_symlink not in recorded_calls, (
             'os:symlink was called')
 
 FakeRenderer = namedtuple('FakeRenderer', [
@@ -348,8 +348,8 @@ def test_build__calls_renderer_run(
     result = build_core.build()
 
     # Test fake_renderer_run was called once, and with expected args
-    assert fake_renderer_run in recorded_calls.by_func
-    calls_of_func = recorded_calls.by_func[fake_renderer_run]
+    assert fake_renderer_run in recorded_calls
+    calls_of_func = recorded_calls[fake_renderer_run]
     assert len(calls_of_func) == 1
     assert calls_of_func[0].args == ()
     assert calls_of_func[0].kwargs == {'use_reloader': False}
@@ -377,8 +377,8 @@ def test_build__calls_create_latest_build_link(
     result = build_core.build()
 
     # Test fake_create_latest_build_link was called once, and with expected args
-    assert fake_create_latest_build_link in recorded_calls.by_func
-    calls_of_func = recorded_calls.by_func[fake_create_latest_build_link]
+    assert fake_create_latest_build_link in recorded_calls
+    calls_of_func = recorded_calls[fake_create_latest_build_link]
     assert len(calls_of_func) == 1
     assert calls_of_func[0].args == (
             'build_output_dir', 'build_output_dir/my_build_just_now')
