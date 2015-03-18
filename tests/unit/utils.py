@@ -14,6 +14,18 @@ class RecordedCalls:
         self.by_func = {}
         self.by_func_name = {}
 
+    def __contains__(self, item):
+        if isinstance(item, str):
+            return item in self.by_func_name
+        else:
+            return item in self.by_func
+
+    def __getitem__(self, item):
+        if isinstance(item, str):
+            return self.by_func_name[item]
+        else:
+            return self.by_func[item]
+
     def add_call(self, func, func_name, args, kwargs):
         call_record = CallRecord(func_name, func, args, kwargs)
         self.in_order.append(call_record)
