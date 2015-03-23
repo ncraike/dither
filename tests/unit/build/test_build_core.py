@@ -247,6 +247,7 @@ def test_create_latest_build_link__doesnt_remove_if_path_exists_and_is_not_link(
     try:
         result = build_core.create_latest_build_link(
                 'some_dir/my_builds', 'some_dir/built_a_moment_ago')
+    # We expect an exception to be thrown, but that's not we're testing
     except:
         pass
 
