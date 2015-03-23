@@ -99,9 +99,8 @@ def test_get_build_output_subdir__calls_ensure_dir_exists_with_path(
 
     # Test fake_ensure_dir_exists was called, and with expected args
     assert fake_ensure_dir_exists in recorded_calls
-    calls_of_func = recorded_calls[fake_ensure_dir_exists]
-    assert len(calls_of_func) == 1
-    assert calls_of_func[0].args == (result,)
+    assert len(recorded_calls[fake_ensure_dir_exists]) == 1
+    assert recorded_calls[fake_ensure_dir_exists][0].args == (result,)
 
 @pytest.fixture(scope='function')
 def common_providers_for_testing_create_latest_build_link(di_providers):
@@ -196,10 +195,10 @@ def test_create_latest_build_link__removes_if_path_exists_and_is_link(
     # Test fake_os_remove was called once, and with expected args
     assert fake_os_remove in recorded_calls, (
             "os:remove wasn't called")
-    calls_of_func = recorded_calls[fake_os_remove]
-    assert len(calls_of_func) == 1, (
+    assert len(recorded_calls[fake_os_remove]) == 1, (
             "os:remove should have been called exactly once")
-    assert calls_of_func[0].args == ('some_dir/my_builds/newest_build',), (
+    assert recorded_calls[fake_os_remove][0].args == (
+            'some_dir/my_builds/newest_build',), (
             "os:remove wasn't called with expected args")
 
 def test_create_latest_build_link__raises_if_path_exists_and_is_not_link(
@@ -342,10 +341,10 @@ def test_build__calls_renderer_run(
 
     # Test fake_renderer_run was called once, and with expected args
     assert fake_renderer_run in recorded_calls
-    calls_of_func = recorded_calls[fake_renderer_run]
-    assert len(calls_of_func) == 1
-    assert calls_of_func[0].args == ()
-    assert calls_of_func[0].kwargs == {'use_reloader': False}
+    assert len(recorded_calls[fake_renderer_run]) == 1
+    assert recorded_calls[fake_renderer_run][0].args == ()
+    assert recorded_calls[fake_renderer_run][0].kwargs == {
+            'use_reloader': False}
 
 def test_build__calls_create_latest_build_link(
         di_providers,
@@ -366,7 +365,6 @@ def test_build__calls_create_latest_build_link(
     # Test fake_create_latest_build_link was called once, and with
     # expected args
     assert fake_create_latest_build_link in recorded_calls
-    calls_of_func = recorded_calls[fake_create_latest_build_link]
-    assert len(calls_of_func) == 1
-    assert calls_of_func[0].args == (
+    assert len(recorded_calls[fake_create_latest_build_link]) == 1
+    assert recorded_calls[fake_create_latest_build_link][0].args == (
             'build_output_dir', 'build_output_dir/my_build_just_now')
