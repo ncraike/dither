@@ -363,7 +363,8 @@ def test_build__calls_create_latest_build_link(
     # Function under test
     result = build_core.build()
 
-    # Test fake_create_latest_build_link was called once, and with expected args
+    # Test fake_create_latest_build_link was called once, and with
+    # expected args
     assert fake_create_latest_build_link in recorded_calls
     calls_of_func = recorded_calls[fake_create_latest_build_link]
     assert len(calls_of_func) == 1
