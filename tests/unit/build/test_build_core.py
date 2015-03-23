@@ -14,32 +14,6 @@ def di_providers():
     di.providers.clear()
     return di.providers
 
-@pytest.fixture(scope='function')
-def register_fake_config(di_providers):
-    '''
-    Configure DI with a small set of config values.
-
-    The config values here are a little different to what are used in
-    production, to ensure the code under test is actually asking the
-    config system, instead of eg just using its own constants.
-    '''
-    di_providers.mass_register({
-        'config.build.output.base_dir_name': 'build_output_dir',
-        'config.build.output.subdir_name_format':
-                'built_at_time_{timestamp}_by_dither',
-        'config.build.output.latest_build_link_name': 'newest_build',
-    })
-
-@pytest.fixture(scope='function')
-def register_fake_run_timestamp(di_providers):
-    '''
-    Configure DI to give a fixed timestamp for utils.run_timestamp,
-    rather than asking the system clock.
-    '''
-    di_providers.mass_register({
-        'utils.run_timestamp': '2000-01-01_06.30.59',
-    })
-
 #
 # XXX Not sure if the fake_os_path_* funcs should do so much
 #
@@ -62,25 +36,41 @@ def fake_os_symlink(link_target_path, link_name):
 def fake_ensure_dir_exists(dir_path):
     pass
 
-FakeOsPathModule = namedtuple('FakeOsPathModule', [
-    'basename',
-    'islink',
-    'join',
-    'lexists',
-    ])
+FakeOsPathModule = namedtuple(
+    'FakeOsPathModule', ['basename', 'islink', 'join', 'lexists'])
 
 def fake_renderer_run(use_reloader='use_reloader default value'):
     pass
 
+@pytest.fixture(scope='function')
+def common_providers_for_testing_get_build_output_subdir(di_providers):
+    '''
+    Configure DI with a common set of resources suitable for testing
+    get_build_output_subdir().
+
+    Individual tests may override some of these resources explicitly by
+    registering a new resource provider with allow_override=True. Often
+    this is done to record how a resource is used.
+    '''
+    di_providers.mass_register({
+        # The config values here are a little different to what are used
+        # in production, to ensure the code under test is actually
+        # asking the config system, instead of eg just using its own
+        # constants.
+        'config.build.output.base_dir_name': 'build_output_dir',
+        'config.build.output.subdir_name_format':
+                'built_at_time_{timestamp}_by_dither',
+        # Give a fixed timestamp for utils.run_timestamp, instead of
+        # asking the system clock.
+        'utils.run_timestamp': '2000-01-01_06.30.59',
+        # Give fake fucntion implementations
+        '.org.python.stdlib.os:path.join': fake_os_path_join,
+        'utils.ensure_dir_exists': fake_ensure_dir_exists,
+    })
+
 def test_get_build_output_subdir__returns_expected_result(
         di_providers,
-        register_fake_config,
-        register_fake_run_timestamp):
-
-    di_providers.register_instance(
-            '.org.python.stdlib.os:path.join', fake_os_path_join)
-    di_providers.register_instance(
-            'utils.ensure_dir_exists', fake_ensure_dir_exists)
+        common_providers_for_testing_get_build_output_subdir):
 
     assert di.resolver.are_all_dependencies_met_for(
             build_core.get_build_output_subdir)
@@ -93,15 +83,13 @@ def test_get_build_output_subdir__returns_expected_result(
 
 def test_get_build_output_subdir__calls_ensure_dir_exists_with_path(
         di_providers,
-        register_fake_config,
-        register_fake_run_timestamp,
+        common_providers_for_testing_get_build_output_subdir,
         recorded_calls):
 
     di_providers.register_instance(
-            '.org.python.stdlib.os:path.join', fake_os_path_join)
-    di_providers.register_instance(
             'utils.ensure_dir_exists',
-            recorded_calls.recorded(fake_ensure_dir_exists))
+            recorded_calls.recorded(fake_ensure_dir_exists),
+            allow_override=True)
 
     assert di.resolver.are_all_dependencies_met_for(
             build_core.get_build_output_subdir)
@@ -115,21 +103,33 @@ def test_get_build_output_subdir__calls_ensure_dir_exists_with_path(
     assert len(calls_of_func) == 1
     assert calls_of_func[0].args == (result,)
 
+@pytest.fixture(scope='function')
+def common_providers_for_testing_create_latest_build_link(di_providers):
+    '''
+    Configure DI with a common set of resources suitable for testing
+    create_latest_build_link().
+
+    Individual tests may override some of these resources explicitly by
+    registering a new resource provider with allow_override=True. Often
+    this is done to record how a resource is used.
+    '''
+    di_providers.mass_register({
+            'config.build.output.latest_build_link_name': 'newest_build',
+            '.org.python.stdlib.os:remove': fake_os_remove,
+            '.org.python.stdlib.os:symlink': fake_os_symlink,
+    })
+
 def test_create_latest_build_link__returns_none(
         di_providers,
-        register_fake_config):
+        common_providers_for_testing_create_latest_build_link):
 
-    fake_os_path = FakeOsPathModule(
-            basename=fake_os_path_basename,
-            join=fake_os_path_join,
-            lexists=lambda path: False,
-            islink=lambda path: False)
     di_providers.register_instance(
-            '.org.python.stdlib.os:path', fake_os_path)
-    di_providers.register_instance(
-            '.org.python.stdlib.os:remove', fake_os_remove)
-    di_providers.register_instance(
-            '.org.python.stdlib.os:symlink', fake_os_symlink)
+            '.org.python.stdlib.os:path',
+            FakeOsPathModule(
+                basename=fake_os_path_basename,
+                join=fake_os_path_join,
+                lexists=(lambda path: False),
+                islink=(lambda path: False)))
 
     assert di.resolver.are_all_dependencies_met_for(
             build_core.create_latest_build_link)
@@ -141,21 +141,20 @@ def test_create_latest_build_link__returns_none(
 
 def test_create_latest_build_link__calls_symlink_as_expected(
         di_providers,
-        register_fake_config,
+        common_providers_for_testing_create_latest_build_link,
         recorded_calls):
 
-    fake_os_path = FakeOsPathModule(
-            basename=fake_os_path_basename,
-            join=fake_os_path_join,
-            lexists=lambda path: False,
-            islink=lambda path: False)
     di_providers.register_instance(
-            '.org.python.stdlib.os:path', fake_os_path)
-    di_providers.register_instance(
-            '.org.python.stdlib.os:remove', fake_os_remove)
+            '.org.python.stdlib.os:path',
+            FakeOsPathModule(
+                basename=fake_os_path_basename,
+                join=fake_os_path_join,
+                lexists=(lambda path: False),
+                islink=(lambda path: False)))
     di_providers.register_instance(
             '.org.python.stdlib.os:symlink',
-            recorded_calls.recorded(fake_os_symlink))
+            recorded_calls.recorded(fake_os_symlink),
+            allow_override=True)
 
     assert di.resolver.are_all_dependencies_met_for(
             build_core.create_latest_build_link)
@@ -166,28 +165,26 @@ def test_create_latest_build_link__calls_symlink_as_expected(
 
     # Test fake_os_symlink was called once, and with expected args
     assert fake_os_symlink in recorded_calls
-    calls_of_func = recorded_calls[fake_os_symlink]
-    assert len(calls_of_func) == 1
-    assert calls_of_func[0].args == (
+    assert len(recorded_calls[fake_os_symlink]) == 1
+    assert recorded_calls[fake_os_symlink][0].args == (
             'built_a_moment_ago', 'some_dir/my_builds/newest_build')
 
 def test_create_latest_build_link__removes_if_path_exists_and_is_link(
         di_providers,
-        register_fake_config,
+        common_providers_for_testing_create_latest_build_link,
         recorded_calls):
 
-    fake_os_path = FakeOsPathModule(
-            basename=fake_os_path_basename,
-            join=fake_os_path_join,
-            lexists=lambda path: True,
-            islink=lambda path: True)
     di_providers.register_instance(
-            '.org.python.stdlib.os:path', fake_os_path)
+            '.org.python.stdlib.os:path',
+            FakeOsPathModule(
+                basename=fake_os_path_basename,
+                join=fake_os_path_join,
+                lexists=(lambda path: True),
+                islink=(lambda path: True)))
     di_providers.register_instance(
             '.org.python.stdlib.os:remove',
-            recorded_calls.recorded(fake_os_remove))
-    di_providers.register_instance(
-            '.org.python.stdlib.os:symlink', fake_os_symlink)
+            recorded_calls.recorded(fake_os_remove),
+            allow_override=True)
 
     assert di.resolver.are_all_dependencies_met_for(
             build_core.create_latest_build_link)
@@ -207,20 +204,16 @@ def test_create_latest_build_link__removes_if_path_exists_and_is_link(
 
 def test_create_latest_build_link__raises_if_path_exists_and_is_not_link(
         di_providers,
-        register_fake_config,
+        common_providers_for_testing_create_latest_build_link,
         recorded_calls):
 
-    fake_os_path = FakeOsPathModule(
-            basename=fake_os_path_basename,
-            join=fake_os_path_join,
-            lexists=lambda path: True,
-            islink=lambda path: False)
     di_providers.register_instance(
-            '.org.python.stdlib.os:path', fake_os_path)
-    di_providers.register_instance(
-            '.org.python.stdlib.os:remove', fake_os_remove)
-    di_providers.register_instance(
-            '.org.python.stdlib.os:symlink', fake_os_symlink)
+            '.org.python.stdlib.os:path',
+            FakeOsPathModule(
+                basename=fake_os_path_basename,
+                join=fake_os_path_join,
+                lexists=(lambda path: True),
+                islink=(lambda path: False)))
 
     assert di.resolver.are_all_dependencies_met_for(
             build_core.create_latest_build_link)
@@ -232,21 +225,20 @@ def test_create_latest_build_link__raises_if_path_exists_and_is_not_link(
 
 def test_create_latest_build_link__doesnt_remove_if_path_exists_and_is_not_link(
         di_providers,
-        register_fake_config,
+        common_providers_for_testing_create_latest_build_link,
         recorded_calls):
 
-    fake_os_path = FakeOsPathModule(
-            basename=fake_os_path_basename,
-            join=fake_os_path_join,
-            lexists=lambda path: True,
-            islink=lambda path: False)
     di_providers.register_instance(
-            '.org.python.stdlib.os:path', fake_os_path)
+            '.org.python.stdlib.os:path',
+            FakeOsPathModule(
+                basename=fake_os_path_basename,
+                join=fake_os_path_join,
+                lexists=(lambda path: True),
+                islink=(lambda path: False)))
     di_providers.register_instance(
             '.org.python.stdlib.os:remove',
-            recorded_calls.recorded(fake_os_remove))
-    di_providers.register_instance(
-            '.org.python.stdlib.os:symlink', fake_os_symlink)
+            recorded_calls.recorded(fake_os_remove),
+            allow_override=True)
 
     assert di.resolver.are_all_dependencies_met_for(
             build_core.create_latest_build_link)
@@ -264,21 +256,20 @@ def test_create_latest_build_link__doesnt_remove_if_path_exists_and_is_not_link(
 
 def test_create_latest_build_link__doesnt_symlink_if_path_exists_and_is_not_link(
         di_providers,
-        register_fake_config,
+        common_providers_for_testing_create_latest_build_link,
         recorded_calls):
 
-    fake_os_path = FakeOsPathModule(
-            basename=fake_os_path_basename,
-            join=fake_os_path_join,
-            lexists=lambda path: True,
-            islink=lambda path: False)
     di_providers.register_instance(
-            '.org.python.stdlib.os:path', fake_os_path)
-    di_providers.register_instance(
-            '.org.python.stdlib.os:remove', fake_os_remove)
+            '.org.python.stdlib.os:path',
+            FakeOsPathModule(
+                basename=fake_os_path_basename,
+                join=fake_os_path_join,
+                lexists=(lambda path: True),
+                islink=(lambda path: False)))
     di_providers.register_instance(
             '.org.python.stdlib.os:symlink',
-            recorded_calls.recorded(fake_os_symlink))
+            recorded_calls.recorded(fake_os_symlink),
+            allow_override=True)
 
     assert di.resolver.are_all_dependencies_met_for(
             build_core.create_latest_build_link)
@@ -301,21 +292,27 @@ def fake_create_latest_build_link(
         output_base_dir_name, latest_build_link_path):
     pass
 
+@pytest.fixture(scope='function')
+def common_providers_for_testing_build(di_providers):
+    '''
+    Configure DI with a common set of resources suitable for testing
+    build().
+
+    Individual tests may override some of these resources explicitly by
+    registering a new resource provider with allow_override=True. Often
+    this is done to record how a resource is used.
+    '''
+    di.providers.mass_register({
+        'config.build.output.base_dir_name': 'build_output_dir',
+        'build.output.path': 'build_output_dir/my_build_just_now',
+        'build.renderer':
+                FakeRenderer(run=fake_renderer_run),
+        'build.output.create_latest_build_link':
+                fake_create_latest_build_link,
+    })
+
 def test_build__returns_None(
-        di_providers,
-        register_fake_config,
-        recorded_calls):
-
-    fake_renderer = FakeRenderer(
-            run=fake_renderer_run)
-
-    di.providers.register_instance(
-            'build.renderer', fake_renderer)
-    di.providers.register_instance(
-            'build.output.path', 'fake/build_output_dir/just_now')
-    di.providers.register_instance(
-            'build.output.create_latest_build_link',
-            fake_create_latest_build_link)
+        di_providers, common_providers_for_testing_build):
 
     assert di.resolver.are_all_dependencies_met_for(
             build_core.build)
@@ -327,19 +324,14 @@ def test_build__returns_None(
 
 def test_build__calls_renderer_run(
         di_providers,
-        register_fake_config,
+        common_providers_for_testing_build,
         recorded_calls):
 
-    fake_renderer = FakeRenderer(
-            run=recorded_calls.recorded(fake_renderer_run))
-
     di.providers.register_instance(
-            'build.renderer', fake_renderer)
-    di.providers.register_instance(
-            'build.output.path', 'fake/build_output_dir/just_now')
-    di.providers.register_instance(
-            'build.output.create_latest_build_link',
-            fake_create_latest_build_link)
+            'build.renderer',
+            FakeRenderer(
+                run=recorded_calls.recorded(fake_renderer_run)),
+            allow_override=True)
 
     assert di.resolver.are_all_dependencies_met_for(
             build_core.build)
@@ -356,19 +348,13 @@ def test_build__calls_renderer_run(
 
 def test_build__calls_create_latest_build_link(
         di_providers,
-        register_fake_config,
+        common_providers_for_testing_build,
         recorded_calls):
 
-    fake_renderer = FakeRenderer(
-            run=recorded_calls.recorded(fake_renderer_run))
-
-    di.providers.register_instance(
-            'build.renderer', fake_renderer)
-    di.providers.register_instance(
-            'build.output.path', 'build_output_dir/my_build_just_now')
     di.providers.register_instance(
             'build.output.create_latest_build_link',
-            recorded_calls.recorded(fake_create_latest_build_link))
+            recorded_calls.recorded(fake_create_latest_build_link),
+            allow_override=True)
 
     assert di.resolver.are_all_dependencies_met_for(
             build_core.build)
